@@ -1,0 +1,1287 @@
+local Luna = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/Nebula-Softworks/Luna-Interface-Suite/refs/heads/master/source.lua",
+    true
+))()
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- Remotes
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local CounterRemotes = Remotes:WaitForChild("CounterRemotes")
+local GetCounterInfo = CounterRemotes:WaitForChild("GetCounterInfo")
+local AssignNPC = CounterRemotes:WaitForChild("AssignNPC")
+local RejectNPC = CounterRemotes:WaitForChild("RejectNPC")
+local RedeemCodeRemote = Remotes:WaitForChild("RedeemCode"):WaitForChild("RedeemCode")
+local ShopRemotes = Remotes:WaitForChild("ShopRemotes")
+local BuyFurniture = ShopRemotes:WaitForChild("BuyFurniture")
+local GetShopInfo = ShopRemotes:WaitForChild("GetShopInfo")
+local GetFurnitureInventory = ShopRemotes:WaitForChild("GetFurnitureInventory")
+local BuyTableEvent = Remotes:WaitForChild("BuyTableEvent")
+local GetUnlockedTables = Remotes:WaitForChild("GetUnlockedTables")
+local PlaceFurnitureEvent = Remotes:WaitForChild("PlaceFurnitureEvent")
+local BuyIngredient = ShopRemotes:WaitForChild("BuyIngredient")
+local ToggleStoreStatus = Remotes:WaitForChild("ToggleStoreStatus")
+local UseBoostEvent = Remotes:WaitForChild("UseBoostEvent")
+local UpgradeToGoldenPan = Remotes:WaitForChild("UpgradeToGoldenPan")
+local NPCRemotes = Remotes:WaitForChild("NPCRemotes")
+local SoftdrinkOrdersUpdated = NPCRemotes:WaitForChild("SoftdrinkOrdersUpdated")
+local AdditionalOrder = NPCRemotes:WaitForChild("AdditionalOrder")
+local NPCDrink = NPCRemotes:WaitForChild("NPCDrink")
+local GiveSoftdrink = ShopRemotes:WaitForChild("GiveSoftdrink")
+local MenuRemotes = Remotes:WaitForChild("MenuRemotes")
+local UnlockMenu = MenuRemotes:WaitForChild("UnlockMenu")
+local ToggleMenu = MenuRemotes:WaitForChild("ToggleMenu")
+local GetMenuData = MenuRemotes:WaitForChild("GetMenuData")
+
+local Modules = ReplicatedStorage:WaitForChild("Modules")
+local FoodConfig = require(Modules:WaitForChild("FoodConfig"))
+local IngredientsConfig = require(Modules:WaitForChild("IngredientsConfig"))
+local SoftdrinkConfig = require(Modules:WaitForChild("SoftdrinkConfig"))
+local FurnitureConfig = require(Modules:WaitForChild("FurnitureConfig"))
+local NPCConfig = require(Modules:WaitForChild("NPCConfig"))
+
+-- Build NPC list with rarities
+local npcNamesWithRarity = {}
+local npcRarityMap = {}
+for name, data in pairs(NPCConfig.Types) do
+    local rarity = data.Rarity or "Unknown"
+    local fullName = name .. " [" .. rarity .. "]"
+    table.insert(npcNamesWithRarity, fullName)
+    npcRarityMap[fullName] = name
+end
+table.sort(npcNamesWithRarity)
+
+-- SOFTDRINK ORDER TRACKING
+local activeDrinkOrders = {}
+local lastDrinkAttempt = {}
+local drinkConns = {}
+
+local function resolveDrinkKey(rawKey)
+    if not rawKey then return "Kola" end
+    local str = tostring(rawKey)
+    local lower = str:lower():gsub("%s+", "")
+    for ingName, _ in pairs(IngredientsConfig or {}) do
+        if tostring(ingName):lower():gsub("%s+", "") == lower then
+            return ingName
+        end
+    end
+    if lower == "cola" or lower == "kola" then
+        return IngredientsConfig["Kola"] and "Kola" or str
+    elseif lower == "suprise" or lower == "surprise" then
+        return IngredientsConfig["Suprise"] and "Suprise" or str
+    elseif lower == "loyal" then
+        return "Loyal"
+    end
+    return str
+end
+
+local function disconnectDrinkConns()
+    for _, conn in ipairs(drinkConns) do
+        pcall(function() conn:Disconnect() end)
+    end
+    drinkConns = {}
+end
+
+disconnectDrinkConns()
+
+table.insert(drinkConns, SoftdrinkOrdersUpdated.OnClientEvent:Connect(function(orders)
+    if type(orders) == "table" then
+        activeDrinkOrders = {}
+        for _, drink in pairs(orders) do
+            table.insert(activeDrinkOrders, resolveDrinkKey(drink))
+        end
+    end
+end))
+
+table.insert(drinkConns, AdditionalOrder.OnClientEvent:Connect(function(_npcName, drinkKey)
+    if drinkKey ~= nil then
+        table.insert(activeDrinkOrders, resolveDrinkKey(drinkKey))
+    end
+end))
+
+local drinkStats = { given = 0, state = "Watching for requests" }
+
+table.insert(drinkConns, NPCDrink.OnClientEvent:Connect(function(_npcName, drinkKey)
+    drinkStats.given = drinkStats.given + 1
+    drinkStats.state = string.format("Delivered %s!", resolveDrinkKey(drinkKey))
+end))
+
+-- TELEPORT LOCK
+local tpLock = false
+
+local function acquireTp()
+    while tpLock do task.wait(0.05) end
+    tpLock = true
+    return function() tpLock = false end
+end
+
+local function getChar() 
+    return LocalPlayer.Character, LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") 
+end
+
+local function tp(cframe)
+    local c = LocalPlayer.Character
+    if c then 
+        local h = c:FindFirstChild("HumanoidRootPart") 
+        if h then h.CFrame = cframe end 
+    end
+end
+
+local function getPlot()
+    for _, v in ipairs(Workspace:GetChildren()) do
+        if string.find(v.Name, "^Karenderya") and v:GetAttribute("Owner") == LocalPlayer.UserId then return v end
+    end
+end
+
+local function parseInvKey(fullKey)
+    local cat, key = string.match(fullKey, "^(%w+)_(.+)$")
+    return cat, key
+end
+
+local function getCash()
+    local ls = LocalPlayer:FindFirstChild("leaderstats")
+    if ls then local c = ls:FindFirstChild("Cash") if c then return c.Value end end
+    return 0
+end
+
+-- STATE
+local State = {
+    AutoAssign = false,
+    AutoServeFood = false,
+    AutoServeDrinks = false,
+    AutoReject = false,
+    AutoClean = false,
+    AutoWash = false,
+    AutoPan = false,
+    AutoClaimCodes = false,
+    AutoBuyFurniture = false,
+    AutoPlaceFurniture = false,
+    AutoUnlockMenu = false,
+
+    AutoBuyIngredients = false,
+    AutoUnlockTables = false,
+    AutoUseBoosts = false,
+    GoldenPan = false,
+
+    NoClip = false,
+    InfiniteJump = false,
+    AntiAFK = false,
+    ESP = false,
+
+    WalkSpeed = 16,
+    AssignDelay = 1,
+    ServeDelay = 0.5,
+    CleanDelay = 0.5,
+    WashDelay = 0.5,
+
+    RejectNPCList = {},
+    FurnitureWhitelist = {},
+    IngBuyThreshold = 5,
+    FurnDelay = 5
+}
+
+local function setState(name, value)
+    State[name] = value
+    print("[Karinderya]", name, value)
+end
+
+-- SOFTDRINK FULFILLMENT
+local function buyIngredient(key)
+    local ingCfg = IngredientsConfig[key]
+    if not ingCfg or not ingCfg.Cost then return false end
+    if getCash() - ingCfg.Cost < 5000 then return false end
+    local ok, success = pcall(function()
+        return BuyIngredient:InvokeServer(key, 1, "Cash")
+    end)
+    return ok and success
+end
+
+local function stepFulfillSoftdrinkOrders()
+    if not State.AutoServeDrinks or #activeDrinkOrders == 0 then return false end
+
+    local drinkKey = resolveDrinkKey(activeDrinkOrders[1])
+    local now = os.clock()
+    if now < (lastDrinkAttempt[drinkKey] or 0) then return false end
+    lastDrinkAttempt[drinkKey] = now + 1.5
+
+    local ingredients = LocalPlayer:FindFirstChild("Ingredients")
+    local stock = ingredients and ingredients:FindFirstChild(drinkKey)
+    if not stock or stock.Value <= 0 then
+        if State.AutoBuyIngredients then
+            buyIngredient(drinkKey)
+            task.wait(0.2)
+            ingredients = LocalPlayer:FindFirstChild("Ingredients")
+            stock = ingredients and ingredients:FindFirstChild(drinkKey)
+        end
+        if not stock or stock.Value <= 0 then
+            lastDrinkAttempt[drinkKey] = now + 5
+            drinkStats.state = drinkKey .. " out of stock"
+            return false
+        end
+    end
+
+    local ok, success, msg = pcall(function()
+        return GiveSoftdrink:InvokeServer(drinkKey)
+    end)
+
+    if ok and success then
+        table.remove(activeDrinkOrders, 1)
+        drinkStats.given = drinkStats.given + 1
+        drinkStats.state = string.format("Delivered %s!", drinkKey)
+        return true
+    else
+        if tostring(msg):match("Nobody") or tostring(msg):match("ordered") then
+            table.remove(activeDrinkOrders, 1)
+        end
+        drinkStats.state = string.format("%s: %s", drinkKey, tostring(msg or success))
+    end
+    return false
+end
+
+-- MONEY LOGGING
+local moneyLog = { entries = {}, totalEarned = 0, totalSpent = 0, startCash = getCash() }
+
+local function logMoney(action, amount)
+    table.insert(moneyLog.entries, 1, {
+        time = os.date("%H:%M:%S"),
+        action = action,
+        amount = amount,
+        cash = getCash(),
+    })
+    if amount > 0 then
+        moneyLog.totalEarned = moneyLog.totalEarned + amount
+    else
+        moneyLog.totalSpent = moneyLog.totalSpent + math.abs(amount)
+    end
+end
+
+-- MY NPCs TRACKING
+local myAssignedNPCs = {}
+
+local function trackNPC(npcId)
+    if npcId and npcId ~= "" then
+        myAssignedNPCs[npcId] = true
+    end
+end
+
+local function isMyRunaway(npc)
+    local id = npc.Name
+    return myAssignedNPCs[id] == true
+end
+
+task.spawn(function()
+    while true do
+        local plot = getPlot()
+        if plot then
+            local dp = plot:FindFirstChild("DiningPlot1")
+            if dp then
+                for _, slot in ipairs(dp:GetChildren()) do
+                    if slot:IsA("Model") then
+                        local o1 = slot:GetAttribute("OccupiedBy1")
+                        local o2 = slot:GetAttribute("OccupiedBy2")
+                        if o1 then trackNPC(o1) end
+                        if o2 then trackNPC(o2) end
+                    end
+                end
+            end
+        end
+        task.wait(1)
+    end
+end)
+
+-- UI WINDOW CREATION
+local Window = Luna:CreateWindow({
+    Name = "Karinderya",
+    Subtitle = "Automation",
+    LogoID = nil,
+    LoadingEnabled = true,
+    LoadingTitle = "Karinderya",
+    LoadingSubtitle = "Loading...",
+    ConfigSettings = {
+        RootFolder = nil,
+        ConfigFolder = "Karinderya"
+    },
+    KeySystem = false
+})
+
+local Main = Window:CreateTab({
+    Name = "Main",
+    Icon = "restaurant",
+    ImageSource = "Material",
+    ShowTitle = true
+})
+
+local Shop = Window:CreateTab({
+    Name = "Shop",
+    Icon = "store",
+    ImageSource = "Material",
+    ShowTitle = true
+})
+
+local Player = Window:CreateTab({
+    Name = "Player",
+    Icon = "person",
+    ImageSource = "Material",
+    ShowTitle = true
+})
+
+local Settings = Window:CreateTab({
+    Name = "Settings",
+    Icon = "settings",
+    ImageSource = "Material",
+    ShowTitle = true
+})
+
+local Logs = Window:CreateTab({
+    Name = "Logs",
+    Icon = "description",
+    ImageSource = "Material",
+    ShowTitle = true
+})
+
+local function toggle(tab, name, description, key)
+    return tab:CreateToggle({
+        Name = name,
+        Description = description,
+        CurrentValue = State[key],
+        Callback = function(value)
+            setState(key, value)
+        end
+    }, key)
+end
+
+Main:CreateSection("Customer Automation")
+
+toggle(Main, "Auto Assign Customers", "Automatically assign customers to available tables", "AutoAssign")
+toggle(Main, "Auto Serve Food", "Automatically serve prepared food", "AutoServeFood")
+toggle(Main, "Auto Serve Drinks", "Automatically serve drinks", "AutoServeDrinks")
+toggle(Main, "Auto Reject NPCs", "Automatically reject selected NPCs", "AutoReject")
+
+Main:CreateDropdown({
+    Name = "Reject NPCs List",
+    Description = "Select NPCs to automatically reject",
+    Options = npcNamesWithRarity,
+    CurrentOption = {},
+    MultipleOptions = true,
+    Callback = function(selected)
+        State.RejectNPCList = {}
+        for _, displayName in ipairs(selected) do
+            local npcName = npcRarityMap[displayName]
+            if npcName then State.RejectNPCList[npcName] = true end
+        end
+    end
+}, "RejectNPCList")
+
+Main:CreateDivider()
+Main:CreateSection("Cleaning")
+
+toggle(Main, "Auto Clean Tables", "Automatically clean tables", "AutoClean")
+toggle(Main, "Auto Wash Dishes", "Automatically wash dishes", "AutoWash")
+toggle(Main, "Auto Pan", "Automatically handle pan actions", "AutoPan")
+
+Main:CreateDivider()
+Main:CreateSection("Other")
+
+toggle(Main, "Auto Claim Codes", "Automatically claim available codes", "AutoClaimCodes")
+toggle(Main, "Auto Buy Furniture", "Automatically buy configured furniture", "AutoBuyFurniture")
+toggle(Main, "Auto Place Furniture", "Automatically place configured furniture", "AutoPlaceFurniture")
+toggle(Main, "Auto Unlock Menu", "Automatically unlock the menu", "AutoUnlockMenu")
+
+-- Build furniture list for dropdown
+local furnitureList = {}
+do
+    local furnCfg = require(Modules:WaitForChild("FurnitureConfig"))
+    if furnCfg.Dining then
+        if furnCfg.Dining.Tables then for k in pairs(furnCfg.Dining.Tables) do table.insert(furnitureList, "Tables: " .. k) end end
+        if furnCfg.Dining.Chairs then for k in pairs(furnCfg.Dining.Chairs) do table.insert(furnitureList, "Chairs: " .. k) end end
+    end
+    if furnCfg.Kitchen and furnCfg.Kitchen.Stoves then
+        for k in pairs(furnCfg.Kitchen.Stoves) do table.insert(furnitureList, "Stoves: " .. k) end
+    end
+    table.sort(furnitureList)
+end
+
+Main:CreateDropdown({
+    Name = "Furniture Whitelist",
+    Description = "Only buy selected furniture (Empty = Buy All)",
+    Options = furnitureList,
+    CurrentOption = {},
+    MultipleOptions = true,
+    Callback = function(selected)
+        State.FurnitureWhitelist = {}
+        for _, name in ipairs(selected) do
+            State.FurnitureWhitelist[name] = true
+        end
+    end
+}, "FurnitureWhitelist")
+
+Main:CreateButton({
+    Name = "Enable All Menus",
+    Description = "Manually trigger all menu unlocks",
+    Callback = function()
+        pcall(function() ToggleMenu:InvokeServer("LUGAW", true) end)
+        pcall(function() ToggleMenu:InvokeServer("SILOG", true) end)
+        pcall(function() ToggleMenu:InvokeServer("LUTONG BAHAY", true) end)
+    end
+})
+
+Shop:CreateSection("Shop Automation")
+
+toggle(Shop, "Auto Buy Ingredients", "Automatically buy configured ingredients", "AutoBuyIngredients")
+toggle(Shop, "Auto Unlock Tables", "Automatically unlock available tables", "AutoUnlockTables")
+toggle(Shop, "Auto Use Boosts", "Automatically use configured boosts", "AutoUseBoosts")
+toggle(Shop, "Golden Pan", "Enable Golden Pan functionality", "GoldenPan")
+
+Shop:CreateSlider({
+    Name = "Ingredient Threshold",
+    Range = {1, 50},
+    Increment = 1,
+    CurrentValue = State.IngBuyThreshold,
+    Callback = function(value) State.IngBuyThreshold = value end
+}, "IngBuyThreshold")
+
+Shop:CreateButton({
+    Name = "Upgrade Golden Pan",
+    Description = "Upgrades your pan to Golden Pan",
+    Callback = function() pcall(function() UpgradeToGoldenPan:InvokeServer() end) end
+})
+
+Shop:CreateButton({
+    Name = "Toggle Store Status",
+    Description = "Opens or closes your restaurant store",
+    Callback = function() pcall(function() ToggleStoreStatus:InvokeServer() end) end
+})
+
+Shop:CreateDivider()
+
+local ShopStatus = Shop:CreateLabel({
+    Text = "Shop automation ready",
+    Style = 2
+})
+
+Player:CreateSection("Movement")
+
+Player:CreateSlider({
+    Name = "WalkSpeed",
+    Range = {16, 100},
+    Increment = 1,
+    CurrentValue = State.WalkSpeed,
+    Callback = function(value)
+        State.WalkSpeed = value
+        local _, h = getChar()
+        if h then h.WalkSpeed = value end
+    end
+}, "WalkSpeed")
+
+toggle(Player, "Infinite Jump", "Enable infinite jumping", "InfiniteJump")
+toggle(Player, "NoClip", "Enable noclip", "NoClip")
+toggle(Player, "Anti AFK", "Prevent your own game from treating the player as AFK", "AntiAFK")
+toggle(Player, "ESP NPCs", "Show NPC information", "ESP")
+
+Player:CreateSection("Teleports")
+
+Player:CreateButton({
+    Name = "Teleport to Counter",
+    Callback = function() 
+        local p = getPlot() 
+        if p then 
+            local c = p:FindFirstChild("Counter") 
+            if c then 
+                local cp = c:FindFirstChild("Comp", true) 
+                if cp then tp(cp.CFrame * CFrame.new(0,3,0)) end 
+            end 
+        end 
+    end
+})
+Player:CreateButton({
+    Name = "Teleport to Kitchen",
+    Callback = function() 
+        local p = getPlot() 
+        if p then 
+            local k = p:FindFirstChild("KitchenPlot1") 
+            if k then 
+                local f = k:GetChildren()[1] 
+                if f then tp(f:GetPivot() * CFrame.new(0,3,0)) end 
+            end 
+        end 
+    end
+})
+Player:CreateButton({
+    Name = "Teleport to Grocery",
+    Callback = function() 
+        local g = Workspace:FindFirstChild("Grocery") 
+        if g then 
+            local c = g:FindFirstChild("Comp", true) 
+            if c then tp(c.CFrame * CFrame.new(0,3,0)) end 
+        end 
+    end
+})
+
+Settings:CreateSection("Automation Delays")
+
+Settings:CreateSlider({
+    Name = "Assign Delay",
+    Range = {0.1, 5},
+    Increment = 0.1,
+    CurrentValue = State.AssignDelay,
+    Callback = function(value) State.AssignDelay = value end
+}, "AssignDelay")
+
+Settings:CreateSlider({
+    Name = "Serve Delay",
+    Range = {0.1, 5},
+    Increment = 0.1,
+    CurrentValue = State.ServeDelay,
+    Callback = function(value) State.ServeDelay = value end
+}, "ServeDelay")
+
+Settings:CreateSlider({
+    Name = "Clean Delay",
+    Range = {0.1, 5},
+    Increment = 0.1,
+    CurrentValue = State.CleanDelay,
+    Callback = function(value) State.CleanDelay = value end
+}, "CleanDelay")
+
+Settings:CreateSlider({
+    Name = "Wash Delay",
+    Range = {0.1, 5},
+    Increment = 0.1,
+    CurrentValue = State.WashDelay,
+    Callback = function(value) State.WashDelay = value end
+}, "WashDelay")
+
+Settings:CreateDivider()
+Settings:BuildThemeSection()
+
+Logs:CreateSection("Status")
+
+local StatusLabel = Logs:CreateLabel({
+    Text = "Automation ready",
+    Style = 2
+})
+
+local MoneyEarnedLabel = Logs:CreateLabel({ Text = "Earned: $0", Style = 1 })
+local MoneySpentLabel = Logs:CreateLabel({ Text = "Spent: $0", Style = 1 })
+local MoneyNetLabel = Logs:CreateLabel({ Text = "Net: $0", Style = 1 })
+
+local function updateStatus(text)
+    StatusLabel:Set({ Text = text })
+end
+
+Logs:CreateButton({
+    Name = "Refresh Status",
+    Description = "Refresh automation status",
+    Callback = function()
+        local active = 0
+        for _, value in pairs(State) do
+            if value == true then active += 1 end
+        end
+        updateStatus("Active automations: " .. tostring(active))
+        MoneyEarnedLabel:Set({ Text = "Earned: $" .. moneyLog.totalEarned })
+        MoneySpentLabel:Set({ Text = "Spent: $" .. moneyLog.totalSpent })
+        MoneyNetLabel:Set({ Text = "Net: $" .. (moneyLog.totalEarned - moneyLog.totalSpent) })
+    end
+})
+
+local Config = Window:CreateTab({
+    Name = "Config",
+    Icon = "save",
+    ImageSource = "Material",
+    ShowTitle = true
+})
+
+Config:BuildConfigSection()
+
+-- BACKGROUND LOOPS & LOGIC
+
+-- Auto Serve Loop
+task.spawn(function()
+    while true do
+        if State.AutoServeFood then
+            local cashBefore = getCash()
+            local served = 0
+            local plot = getPlot()
+            if plot then
+                local dp = plot:FindFirstChild("DiningPlot1")
+                if dp then
+                    for _, slot in ipairs(dp:GetChildren()) do
+                        if served >= 3 then break end
+                        if slot:IsA("Model") then
+                            for _, desc in ipairs(slot:GetDescendants()) do
+                                if served >= 3 then break end
+                                if desc:IsA("ProximityPrompt") and desc.Enabled then
+                                    local action = desc.ActionText
+                                    if string.sub(action, 1, 5) == "Serve" then
+                                        local pp = desc.Parent
+                                        if pp and pp:IsA("BasePart") then
+                                            local release = acquireTp()
+                                            tp(pp.CFrame * CFrame.new(0, 3, 0))
+                                            task.wait(0.15)
+                                            fireproximityprompt(desc)
+                                            release()
+                                            served = served + 1
+                                            task.wait(0.2)
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+                local serve = plot:FindFirstChild("Serve")
+                if serve then
+                    for _, desc in ipairs(serve:GetDescendants()) do
+                        if served >= 3 then break end
+                        if desc:IsA("ProximityPrompt") and desc.Enabled then
+                            local pp = desc.Parent
+                            if pp and pp:IsA("BasePart") then
+                                local release = acquireTp()
+                                tp(pp.CFrame * CFrame.new(0, 3, 0))
+                                task.wait(0.15)
+                                fireproximityprompt(desc)
+                                release()
+                                served = served + 1
+                                task.wait(0.2)
+                            end
+                        end
+                    end
+                end
+            end
+            local diff = getCash() - cashBefore
+            if diff ~= 0 then logMoney("Serve Food", diff) end
+
+            if State.AutoServeDrinks then
+                for _ = 1, 5 do
+                    if not stepFulfillSoftdrinkOrders() then break end
+                    task.wait(0.1)
+                end
+            end
+        end
+        task.wait(State.ServeDelay)
+    end
+end)
+
+-- Auto Assign / Order Loop
+task.spawn(function()
+    while true do
+        if State.AutoAssign then
+            local totalAssigned = 0
+            for attempt = 1, 15 do
+                local plot = getPlot()
+                if plot then
+                    local counter = plot:FindFirstChild("Counter")
+                    if counter then
+                        local comp = counter:FindFirstChild("Comp", true)
+                        if comp then
+                            for _, desc in ipairs(comp:GetDescendants()) do
+                                if desc:IsA("ProximityPrompt") and desc.Enabled then
+                                    local action = desc.ActionText
+                                    if string.find(action, "Take Order") or string.find(action, "Take") then
+                                        local pp = desc.Parent
+                                        if pp and pp:IsA("BasePart") then
+                                            local release = acquireTp()
+                                            tp(pp.CFrame * CFrame.new(0, 3, 0))
+                                            task.wait(0.1)
+                                            fireproximityprompt(desc)
+                                            release()
+                                            task.wait(0.15)
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+                local ok, npc, tbls = pcall(function() return GetCounterInfo:InvokeServer() end)
+                if ok and npc and tbls then
+                    local id = npc.NpcId or npc.TemplateName or ""
+                    local templateName = npc.TemplateName or ""
+                    if State.AutoReject and State.RejectNPCList[templateName] then
+                        pcall(function() RejectNPC:FireServer(id) end)
+                        task.wait(0.5)
+                        break
+                    end
+                    trackNPC(id)
+                    local s = false
+                    for _, t in ipairs(tbls) do
+                        if t.Slot and t.Seat then
+                            s = pcall(function() AssignNPC:FireServer({Slot=t.Slot, Seat=t.Seat, NPCName=id, NpcId=id}) end)
+                            if s then totalAssigned = totalAssigned + 1 break end
+                        end
+                    end
+                    if not s then break end
+                else
+                    break
+                end
+                task.wait(0.05)
+            end
+        end
+        task.wait(State.AssignDelay)
+    end
+end)
+
+-- Auto Clean Loop
+task.spawn(function()
+    while true do
+        if State.AutoClean then
+            local plot = getPlot()
+            if plot then
+                local dp = plot:FindFirstChild("DiningPlot1")
+                if dp then
+                    for _, tm in ipairs(dp:GetChildren()) do
+                        if tm:IsA("Model") or tm:IsA("Folder") then
+                            for _, desc in ipairs(tm:GetDescendants()) do
+                                if desc:IsA("ProximityPrompt") and desc.Enabled then
+                                    local action = desc.ActionText:lower()
+                                    if string.find(action, "clean") or string.find(action, "pick") or string.find(action, "dispose") or string.find(action, "collect") or string.find(action, "trash") then
+                                        local pp = desc.Parent
+                                        if pp and pp:IsA("BasePart") then
+                                            local release = acquireTp()
+                                            tp(pp.CFrame * CFrame.new(0, 3, 0))
+                                            task.wait(0.15)
+                                            fireproximityprompt(desc)
+                                            release()
+                                            task.wait(0.2)
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(State.CleanDelay)
+    end
+end)
+
+-- Auto Wash Loop
+task.spawn(function()
+    while true do
+        if State.AutoWash then
+            local plot = getPlot()
+            if plot then
+                local sink = plot:FindFirstChild("Sink")
+                local collectAreas = {}
+                local dp = plot:FindFirstChild("DiningPlot1")
+                if dp then table.insert(collectAreas, dp) end
+                local serve = plot:FindFirstChild("Serve")
+                if serve then table.insert(collectAreas, serve) end
+
+                for _, area in ipairs(collectAreas) do
+                    for _, desc in ipairs(area:GetDescendants()) do
+                        if desc:IsA("ProximityPrompt") and desc.Enabled then
+                            local action = desc.ActionText:lower()
+                            local obj = desc.ObjectText:lower()
+                            if string.find(obj, "dirty") or string.find(obj, "dish") or string.find(action, "wash") or string.find(action, "pick") then
+                                local pp = desc.Parent
+                                if pp and pp:IsA("BasePart") then
+                                    local release = acquireTp()
+                                    tp(pp.CFrame * CFrame.new(0, 3, 0))
+                                    task.wait(0.15)
+                                    pcall(function() if desc.Enabled then fireproximityprompt(desc) end end)
+                                    release()
+                                    task.wait(0.3)
+
+                                    local gotTool = false
+                                    for _ = 1, 20 do
+                                        local c = LocalPlayer.Character
+                                        if c and c:FindFirstChildOfClass("Tool") then gotTool = true; break end
+                                        task.wait(0.1)
+                                    end
+
+                                    if gotTool and sink then
+                                        task.wait(0.15)
+                                        for _, pd in ipairs(sink:GetDescendants()) do
+                                            if pd:IsA("ProximityPrompt") and pd.Enabled then
+                                                local a = pd.ActionText:lower()
+                                                if string.find(a, "put") or string.find(a, "place") or pd.Name == "Put" then
+                                                    local r2 = acquireTp()
+                                                    tp(pd.Parent.CFrame * CFrame.new(0, 3, 0))
+                                                    task.wait(0.2)
+                                                    pcall(function() fireproximityprompt(pd) end)
+                                                    r2()
+                                                    task.wait(0.5)
+                                                    break
+                                                end
+                                            end
+                                        end
+                                    end
+                                    pcall(function()
+                                        local c = LocalPlayer.Character
+                                        if c then
+                                            local t = c:FindFirstChildOfClass("Tool")
+                                            if t then t.Parent = LocalPlayer.Backpack end
+                                        end
+                                    end)
+                                end
+                            end
+                        end
+                    end
+                end
+
+                if sink then
+                    for attempt = 1, 10 do
+                        local washPrompt = nil
+                        for _, pd in ipairs(sink:GetDescendants()) do
+                            if pd:IsA("ProximityPrompt") and pd.Enabled then
+                                local a = pd.ActionText:lower()
+                                local o = pd.ObjectText:lower()
+                                if string.find(a, "wash") or string.find(a, "clean") or string.find(a, "scrub") or string.find(o, "dish") or string.find(o, "dirty") or string.find(o, "plate") then
+                                    washPrompt = pd
+                                    break
+                                end
+                            end
+                        end
+                        if not washPrompt then break end
+
+                        local release3 = acquireTp()
+                        tp(washPrompt.Parent.CFrame * CFrame.new(0, 3, 0))
+                        task.wait(0.15)
+                        pcall(function()
+                            local holdTime = washPrompt.HoldDuration or 1
+                            local VIM = game:GetService("VirtualInputManager")
+                            VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                            task.delay(holdTime + 0.3, function()
+                                pcall(function() VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game) end)
+                            end)
+                        end)
+                        pcall(fireproximityprompt, washPrompt)
+                        release3()
+                        task.wait(1.5)
+                    end
+                end
+            end
+        end
+        task.wait(State.WashDelay)
+    end
+end)
+
+-- Auto Pan Loop
+task.spawn(function()
+    while true do
+        if State.AutoPan then
+            local char, hum = getChar()
+            if char and hum then
+                local bp = LocalPlayer:FindFirstChild("Backpack")
+                local pan = bp and bp:FindFirstChild("Pan") if not pan then pan = char:FindFirstChild("Pan") end
+
+                if pan then
+                    for attempt = 1, 10 do
+                        local cn = Workspace:FindFirstChild("ClientNPCs")
+                        local runawayNPC = nil
+                        if cn then
+                            for _, npc in ipairs(cn:GetChildren()) do
+                                if npc:IsA("Model") and npc:GetAttribute("IsRunaway") == true and isMyRunaway(npc) then
+                                    runawayNPC = npc
+                                    break
+                                end
+                            end
+                        end
+
+                        if not runawayNPC then break end
+
+                        local nh = runawayNPC:FindFirstChild("HumanoidRootPart") or runawayNPC.PrimaryPart
+                        if not nh then break end
+
+                        if pan.Parent ~= char then hum:EquipTool(pan) task.wait(0.2) end
+
+                        local release = acquireTp()
+                        tp(nh.CFrame * CFrame.new(0, 0, -3))
+                        task.wait(0.1)
+
+                        if pan.Parent == char then pcall(function() pan:Activate() end) end
+                        release()
+                        task.wait(0.4)
+
+                        if pan.Parent == char then hum:UnequipTools() task.wait(0.15) end
+                    end
+                end
+            end
+        end
+        task.wait(0.5)
+    end
+end)
+
+-- Auto Buy Ingredients Loop
+task.spawn(function()
+    while true do
+        if State.AutoBuyIngredients then
+            local cash = getCash()
+            local threshold = State.IngBuyThreshold
+            local ing = LocalPlayer:FindFirstChild("Ingredients")
+            if ing then
+                for name, data in pairs(IngredientsConfig) do
+                    local val = ing:FindFirstChild(name)
+                    if val and val.Value < threshold then
+                        local price = data.Cost or 0
+                        local buyCount = math.max(1, threshold - val.Value)
+                        for i = 1, buyCount do
+                            if cash >= price then
+                                local cashBefore = getCash()
+                                pcall(function() BuyIngredient:InvokeServer(name, 1, "Cash") end)
+                                local cashAfter = getCash()
+                                local diff = cashAfter - cashBefore
+                                if diff ~= 0 then logMoney("Buy " .. name, diff) end
+                                cash = cashAfter
+                                task.wait(0.3)
+                            else break end
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(5)
+    end
+end)
+
+-- Auto Claim Codes Loop
+task.spawn(function()
+    local claimed = {}
+    while true do
+        if State.AutoClaimCodes then
+            for _, code in ipairs({"LERISNATO"}) do
+                if not claimed[code] then
+                    pcall(function() RedeemCodeRemote:FireServer(code) end)
+                    claimed[code] = true
+                    task.wait(3)
+                end
+            end
+        end
+        task.wait(10)
+    end
+end)
+
+-- Auto Buy Furniture
+task.spawn(function()
+    while true do
+        if State.AutoBuyFurniture then
+            local cash = getCash()
+            local ok, shopData = pcall(function() return GetShopInfo:InvokeServer() end)
+            if ok and shopData then
+                local furnCfg = FurnitureConfig
+                local allItems = {}
+                local hasWhitelist = next(State.FurnitureWhitelist) ~= nil
+                for _, category in ipairs({"Tables", "Chairs", "Stoves"}) do
+                    local items = shopData[category]
+                    if items then
+                        for _, item in ipairs(items) do
+                            if item.Stock and item.Stock > 0 then
+                                local displayName = category .. ": " .. item.Key
+                                if not hasWhitelist or State.FurnitureWhitelist[displayName] then
+                                    local price = 0
+                                    local sysType = item.SystemType or "Dining"
+                                    if sysType == "Kitchen" then
+                                        local stoves = furnCfg.Kitchen and furnCfg.Kitchen.Stoves
+                                        if stoves and stoves[item.Key] and type(stoves[item.Key]) == "table" then
+                                            price = stoves[item.Key].Price or 0
+                                        end
+                                    else
+                                        local catData = furnCfg.Dining and furnCfg.Dining[category]
+                                        if catData and catData[item.Key] and type(catData[item.Key]) == "table" then
+                                            price = catData[item.Key].Price or 0
+                                        end
+                                    end
+                                    table.insert(allItems, {item = item, price = price})
+                                end
+                            end
+                        end
+                    end
+                end
+                table.sort(allItems, function(a, b) return a.price > b.price end)
+
+                for _, entry in ipairs(allItems) do
+                    if entry.price <= cash and entry.price > 0 then
+                        local cashBefore = getCash()
+                        pcall(function() BuyFurniture:InvokeServer(entry.item.SystemType, entry.item.Category, entry.item.Key) end)
+                        local cashAfter = getCash()
+                        local diff = cashAfter - cashBefore
+                        if diff ~= 0 then logMoney("Buy " .. entry.item.Key, diff) end
+                        cash = cashAfter
+                        task.wait(0.5)
+                    end
+                end
+            end
+        end
+        task.wait(State.FurnDelay)
+    end
+end)
+
+-- Auto Place / Upgrade Furniture Loop
+task.spawn(function()
+    local priceLookup = {}
+    local furnCfg = FurnitureConfig
+    if furnCfg.Dining then
+        if furnCfg.Dining.Tables then
+            for k, v in pairs(furnCfg.Dining.Tables) do
+                if type(v) == "table" and v.Price then priceLookup["Tables_" .. k] = v.Price end
+            end
+        end
+        if furnCfg.Dining.Chairs then
+            for k, v in pairs(furnCfg.Dining.Chairs) do
+                if type(v) == "table" and v.Price then priceLookup["Chairs_" .. k] = v.Price end
+            end
+        end
+    end
+    if furnCfg.Kitchen and furnCfg.Kitchen.Stoves then
+        for k, v in pairs(furnCfg.Kitchen.Stoves) do
+            if type(v) == "table" and v.Price then priceLookup["Stoves_" .. k] = v.Price end
+        end
+    end
+
+    local modelNameToKey = {}
+    if furnCfg.Dining then
+        if furnCfg.Dining.Tables then
+            for k, v in pairs(furnCfg.Dining.Tables) do
+                if type(v) == "table" and v.Name then modelNameToKey[v.Name] = k end
+            end
+        end
+        if furnCfg.Dining.Chairs then
+            for k, v in pairs(furnCfg.Dining.Chairs) do
+                if type(v) == "table" and v.Name then modelNameToKey[v.Name] = k end
+            end
+        end
+    end
+    if furnCfg.Kitchen and furnCfg.Kitchen.Stoves then
+        for k, v in pairs(furnCfg.Kitchen.Stoves) do
+            if type(v) == "table" and v.Name then modelNameToKey[v.Name] = k end
+        end
+    end
+
+    while true do
+        if State.AutoPlaceFurniture then
+            local plot = getPlot()
+            if plot then
+                local ok, inv = pcall(function() return GetFurnitureInventory:InvokeServer() end)
+                if ok and inv then
+                    local inventory = {Tables = {}, Chairs = {}, Stoves = {}}
+                    for fullKey, count in pairs(inv) do
+                        if type(count) == "number" and count > 0 then
+                            local cat, key = parseInvKey(fullKey)
+                            if cat and inventory[cat] then
+                                table.insert(inventory[cat], {key = key, count = count, price = priceLookup[fullKey] or 0})
+                            end
+                        end
+                    end
+                    for _, list in pairs(inventory) do
+                        table.sort(list, function(a, b) return a.price > b.price end)
+                    end
+
+                    local dp = plot:FindFirstChild("DiningPlot1")
+                    if dp then
+                        for _, slot in ipairs(dp:GetChildren()) do
+                            if slot:IsA("Model") then
+                                local ct = slot:FindFirstChild("CurrentTable")
+                                if ct then
+                                    local currentChildren = ct:GetChildren()
+                                    local currentPrice = 0
+                                    if #currentChildren > 0 then
+                                        local currentModel = currentChildren[1]
+                                        local currentKey = modelNameToKey[currentModel.Name] or currentModel.Name
+                                        currentPrice = priceLookup["Tables_" .. currentKey] or 0
+                                    end
+                                    if #inventory.Tables > 0 then
+                                        local best = inventory.Tables[1]
+                                        if best.price > currentPrice then
+                                            pcall(function() PlaceFurnitureEvent:FireServer(slot, "Tables", best.key) end)
+                                            task.wait(1)
+                                        end
+                                    end
+                                end
+                                local cc = slot:FindFirstChild("CurrentChair")
+                                if cc then
+                                    local currentChildren = cc:GetChildren()
+                                    local currentPrice = 0
+                                    if #currentChildren > 0 then
+                                        local currentModel = currentChildren[1]
+                                        local currentKey = modelNameToKey[currentModel.Name] or currentModel.Name
+                                        currentPrice = priceLookup["Chairs_" .. currentKey] or 0
+                                    end
+                                    if #inventory.Chairs > 0 then
+                                        local best = inventory.Chairs[1]
+                                        if best.price > currentPrice then
+                                            pcall(function() PlaceFurnitureEvent:FireServer(slot, "Chairs", best.key) end)
+                                            task.wait(1)
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+
+                    local kp = plot:FindFirstChild("KitchenPlot1")
+                    if kp then
+                        for _, slot in ipairs(kp:GetChildren()) do
+                            if slot:IsA("Model") or slot:IsA("Folder") then
+                                local cb = slot:FindFirstChild("CurrentBuilding")
+                                if cb then
+                                    local currentChildren = cb:GetChildren()
+                                    local currentPrice = 0
+                                    if #currentChildren > 0 then
+                                        local currentModel = currentChildren[1]
+                                        local currentKey = modelNameToKey[currentModel.Name] or currentModel.Name
+                                        currentPrice = priceLookup["Stoves_" .. currentKey] or 0
+                                    end
+                                    if #inventory.Stoves > 0 then
+                                        local best = inventory.Stoves[1]
+                                        if best.price > currentPrice then
+                                            pcall(function() PlaceFurnitureEvent:FireServer(slot, "Stoves", best.key, "Kitchen") end)
+                                            task.wait(1)
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(State.FurnDelay)
+    end
+end)
+
+-- Auto Unlock Tables
+task.spawn(function()
+    while true do
+        if State.AutoUnlockTables then
+            local cash = getCash()
+            local ok, unlocked = pcall(function() return GetUnlockedTables:InvokeServer() end)
+            if ok and unlocked then
+                local count = 0
+                for _, v in pairs(unlocked) do if v == true then count = count + 1 end end
+                local cost = (count + 1) * 20000
+                if cash >= cost then
+                    for i = 7, 12 do
+                        local tableName = "Table" .. i
+                        if not unlocked[tableName] then
+                            local cashBefore = getCash()
+                            pcall(function() BuyTableEvent:InvokeServer(tableName) end)
+                            local cashAfter = getCash()
+                            local diff = cashAfter - cashBefore
+                            if diff ~= 0 then logMoney("Unlock " .. tableName, diff) end
+                            task.wait(0.5)
+                            break
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(10)
+    end
+end)
+
+-- Auto Use Boosts Loop
+task.spawn(function()
+    while true do
+        if State.AutoUseBoosts then
+            local cashPotions = LocalPlayer:GetAttribute("CashPotionCount") or 0
+            if cashPotions > 0 then
+                pcall(function() UseBoostEvent:FireServer("CashPotion") end)
+                task.wait(1)
+            end
+            local luckPotions = LocalPlayer:GetAttribute("LuckPotionCount") or 0
+            if luckPotions > 0 then
+                pcall(function() UseBoostEvent:FireServer("LuckPotion") end)
+                task.wait(1)
+            end
+            local ultraPotions = LocalPlayer:GetAttribute("UltraLuckPotionCount") or 0
+            if ultraPotions > 0 then
+                pcall(function() UseBoostEvent:FireServer("UltraLuckPotion") end)
+                task.wait(1)
+            end
+        end
+        task.wait(30)
+    end
+end)
+
+-- Auto Unlock Menu
+task.spawn(function()
+    while true do
+        if State.AutoUnlockMenu then
+            local ok, menuData = pcall(function() return GetMenuData:InvokeServer() end)
+            if ok and menuData then
+                local served = menuData.TotalServed or 0
+                if served >= 100 and not menuData.UnlockedMenus.SILOG then
+                    pcall(function() UnlockMenu:InvokeServer("SILOG") end)
+                    task.wait(1)
+                elseif served >= 670 and not (menuData.UnlockedMenus["LUTONG BAHAY"]) then
+                    pcall(function() UnlockMenu:InvokeServer("LUTONG BAHAY") end)
+                    task.wait(1)
+                end
+            end
+        end
+        task.wait(15)
+    end
+end)
+
+-- Character Mod Handlers
+RunService.Stepped:Connect(function()
+    if State.NoClip then
+        local char = LocalPlayer.Character
+        if char then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
+        end
+    end
+end)
+
+local VirtualUser = game:GetService("VirtualUser")
+LocalPlayer.Idled:Connect(function()
+    if State.AntiAFK then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if State.InfiniteJump then
+        local _, h = getChar()
+        if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end
+    end
+end)
+
+-- ESP System
+task.spawn(function()
+    local function addESP(npc)
+        if not npc:IsA("Model") or npc:FindFirstChild("KarinderyaESP") then return end
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "KarinderyaESP"
+        highlight.FillTransparency = 0.7
+        highlight.OutlineTransparency = 0.2
+        if npc:GetAttribute("IsRunaway") then
+            highlight.FillColor = Color3.fromRGB(255, 0, 0)
+        elseif npc:GetAttribute("Order") then
+            highlight.FillColor = Color3.fromRGB(0, 170, 255)
+        else
+            highlight.FillColor = Color3.fromRGB(0, 255, 100)
+        end
+        highlight.Adornee = npc
+        highlight.Parent = npc
+    end
+
+    local function removeESP(npc)
+        local esp = npc:FindFirstChild("KarinderyaESP")
+        if esp then esp:Destroy() end
+    end
+
+    while true do
+        local cn = Workspace:FindFirstChild("ClientNPCs")
+        if cn then
+            for _, npc in ipairs(cn:GetChildren()) do
+                if State.ESP then addESP(npc) else removeESP(npc) end
+            end
+        end
+        task.wait(1)
+    end
+end)
+
+Luna:LoadAutoloadConfig()
+ShopStatus:Set({ Text = "Shop automation operational" })
