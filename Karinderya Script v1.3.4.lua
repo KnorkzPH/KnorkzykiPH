@@ -1,3 +1,14 @@
+--[[
+
+Hi! I'm selling the original, unobfuscated source code for $25 USD.
+Payment Methods:
+- GCash and other apps that support USD > PHP conversion
+- Robux - payment must be equivalent to $25 USD
+Interested in buying? Join my Discord server for more details, or 
+message me on TikTok: _jsephmols
+Discord: https://discord.gg/C8WUgjPqK
+]]--
+
 local jjI1OOiOOjOI0o=(getfenv and getfenv(1)) or _ENV or _G
 local i0Ij01OjjIOL,IOIO0l1i=string.byte,string.char
 local function jlilij(L11OOLOj,jjilIl1i0Oo0)
