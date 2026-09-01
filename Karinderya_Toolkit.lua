@@ -1,13 +1,51 @@
---[[
- .____                  ________ ___.    _____                           __                
- |    |    __ _______   \_____  \\_ |___/ ____\_ __  ______ ____ _____ _/  |_  ___________ 
- |    |   |  |  \__  \   /   |   \| __ \   __\  |  \/  ___// ___\\__  \\   __\/  _ \_  __ \
- |    |___|  |  // __ \_/    |    \ \_\ \  | |  |  /\___ \\  \___ / __ \|  | (  <_> )  | \/
- |_______ \____/(____  /\_______  /___  /__| |____//____  >\___  >____  /__|  \____/|__|   
-         \/          \/         \/    \/                \/     \/     \/                   
-          \_Welcome to LuaObfuscator.com   (Alpha 0.10.9) ~  Much Love, Ferib 
+local StarterGui = game:GetService("StarterGui")
 
-]]--
+local DiscordLink = "https://discord.gg/X8wszxanhU"
+
+task.spawn(function()
+    for _ = 1, 5 do
+        local success = pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "Karindarians | Notice",
+                Text = "Enjoy the script while it's still keyless.",
+                Duration = 15
+            })
+
+            StarterGui:SetCore("SendNotification", {
+                Title = "Starting tomorrow",
+                Text = "There will be no more keyless access.",
+                Duration = 15
+            })
+        end)
+
+        if success then break end
+        task.wait(1)
+    end
+end)
+
+task.wait(1.8)
+
+local BindableFunction = Instance.new("BindableFunction")
+
+BindableFunction.OnInvoke = function(button)
+    if button == "Copy" then
+        if setclipboard then
+            setclipboard(DiscordLink)
+        elseif toclipboard then
+            toclipboard(DiscordLink)
+        end
+    end
+end
+
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "For more info:",
+        Text = "Join our Discord | Updates: GMT+8 (Philippines) | 7 AM–12 PM",
+        Duration = 9.8,
+        Button1 = "Copy",
+        Callback = BindableFunction
+    })
+end)
 
 local StrToNumber = tonumber;
 local Byte = string.byte;
