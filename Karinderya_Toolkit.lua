@@ -8,13 +8,13 @@ task.spawn(function()
             StarterGui:SetCore("SendNotification", {
                 Title = "Karindarians | Notice",
                 Text = "Enjoy the script while it's still keyless.",
-                Duration = 15
+                Duration = 20
             })
 
             StarterGui:SetCore("SendNotification", {
                 Title = "Starting tomorrow",
                 Text = "There will be no more keyless access.",
-                Duration = 15
+                Duration = 20
             })
         end)
 
@@ -41,7 +41,7 @@ pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "For more info:",
         Text = "Join our Discord | Updates: GMT+8 (Philippines) | 7 AM–12 PM",
-        Duration = 9.8,
+        Duration = 20,
         Button1 = "Copy",
         Callback = BindableFunction
     })
