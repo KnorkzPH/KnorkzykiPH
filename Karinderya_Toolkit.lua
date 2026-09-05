@@ -1,5 +1,6 @@
 --[[
-😛🤓😳🥹😭🖕🏼
+🤔
+luaobsfucator
 ]]--
 
 local obf_stringchar = string.char;
