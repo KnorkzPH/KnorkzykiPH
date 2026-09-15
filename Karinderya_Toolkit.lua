@@ -1,383 +1,512 @@
-local CoreGui = game:GetService("CoreGui")
-
-local DiscordLink = "https://discord.gg/RQRZ7XkfCy"
-local ScriptURL = "https://api.jnkie.com/api/v1/luascripts/public/4a486c7d3a528d95c98c03ed00c72423f33969a6d9da657b8143c21f2a175bc2/download"
+local a = game:GetService("CoreGui")
+local b = {
+    ["d"] = "https://discord.gg/RQRZ7XkfCy",
+    ["s"] = "https://api.jnkie.com/api/v1/luascripts/public/4a486c7d3a528d95c98c03ed00c72423f33969a6d9da657b8143c21f2a175bc2/download",
+    ["n"] = "PremiumScriptLoader",
+    ["t"] = "Karinderya Launcher",
+    ["st"] = "Online • Ready to execute"
+}
 
 pcall(function()
-    local old = CoreGui:FindFirstChild("PremiumScriptLoader")
-    if old then
-        old:Destroy()
+    local c = a:FindFirstChild(b.n)
+    if c then c:Destroy() end
+end)
+
+local c = Instance.new("ScreenGui")
+c.Name = b.n
+c.ResetOnSpawn = false
+c.IgnoreGuiInset = true
+c.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+c.Parent = a
+
+local d = Instance.new("Frame")
+d.Name = "Main"
+d.AnchorPoint = Vector2.new(.5,.5)
+d.Position = UDim2.fromScale(.5,.5)
+d.Size = UDim2.new(.92,0,.86,0)
+d.BackgroundColor3 = Color3.fromRGB(18,18,18)
+d.BorderSizePixel = 0
+d.Parent = c
+
+local e = Instance.new("UISizeConstraint")
+e.MinSize = Vector2.new(300,400)
+e.MaxSize = Vector2.new(620,620)
+e.Parent = d
+
+local f = Instance.new("UICorner")
+f.CornerRadius = UDim.new(0,16)
+f.Parent = d
+
+local g = Instance.new("UIStroke")
+g.Color = Color3.fromRGB(55,55,55)
+g.Thickness = 1
+g.Transparency = .2
+g.Parent = d
+
+local h = Instance.new("Frame")
+h.Name = "Header"
+h.Size = UDim2.new(1,-32,0,58)
+h.Position = UDim2.fromOffset(16,12)
+h.BackgroundTransparency = 1
+h.Parent = d
+
+local i = Instance.new("TextLabel")
+i.Name = "Title"
+i.Size = UDim2.new(1,-48,0,29)
+i.BackgroundTransparency = 1
+i.Text = b.t
+i.TextColor3 = Color3.fromRGB(255,255,255)
+i.TextSize = 20
+i.Font = Enum.Font.GothamBold
+i.TextXAlignment = Enum.TextXAlignment.Left
+i.TextYAlignment = Enum.TextYAlignment.Center
+i.Parent = h
+
+local j = Instance.new("TextLabel")
+j.Name = "Subtitle"
+j.Size = UDim2.new(1,-48,0,20)
+j.Position = UDim2.fromOffset(0,31)
+j.BackgroundTransparency = 1
+j.Text = b.st
+j.TextColor3 = Color3.fromRGB(145,145,145)
+j.TextSize = 11
+j.Font = Enum.Font.Gotham
+j.TextXAlignment = Enum.TextXAlignment.Left
+j.TextYAlignment = Enum.TextYAlignment.Center
+j.Parent = h
+
+local k = Instance.new("TextButton")
+k.Name = "Close"
+k.Size = UDim2.fromOffset(34,34)
+k.AnchorPoint = Vector2.new(1,0)
+k.Position = UDim2.new(1,0,0,1)
+k.BackgroundColor3 = Color3.fromRGB(35,35,35)
+k.BorderSizePixel = 0
+k.Text = "×"
+k.TextColor3 = Color3.fromRGB(215,215,215)
+k.TextSize = 22
+k.Font = Enum.Font.GothamMedium
+k.AutoButtonColor = true
+k.Parent = h
+
+local l = Instance.new("UICorner")
+l.CornerRadius = UDim.new(0,9)
+l.Parent = k
+
+k.MouseButton1Click:Connect(function()
+    if c and c.Parent then
+        c:Destroy()
     end
 end)
 
-local Gui = Instance.new("ScreenGui")
-Gui.Name = "PremiumScriptLoader"
-Gui.ResetOnSpawn = false
-Gui.IgnoreGuiInset = true
-Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-Gui.Parent = CoreGui
+local m = Instance.new("Frame")
+m.Name = "Content"
+m.Size = UDim2.new(1,-32,1,-82)
+m.Position = UDim2.fromOffset(16,70)
+m.BackgroundTransparency = 1
+m.Parent = d
 
-local Main = Instance.new("Frame")
-Main.Name = "Main"
-Main.AnchorPoint = Vector2.new(0.5, 0.5)
-Main.Position = UDim2.fromScale(0.5, 0.5)
-Main.Size = UDim2.new(0.92, 0, 0, 340)
-Main.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-Main.BorderSizePixel = 0
-Main.Parent = Gui
+local n = Instance.new("UIListLayout")
+n.FillDirection = Enum.FillDirection.Horizontal
+n.HorizontalAlignment = Enum.HorizontalAlignment.Left
+n.VerticalAlignment = Enum.VerticalAlignment.Top
+n.SortOrder = Enum.SortOrder.LayoutOrder
+n.Padding = UDim.new(0,10)
+n.Parent = m
 
-local MainConstraint = Instance.new("UISizeConstraint")
-MainConstraint.MinSize = Vector2.new(300, 310)
-MainConstraint.MaxSize = Vector2.new(560, 360)
-MainConstraint.Parent = Main
+local o = Instance.new("Frame")
+o.Name = "NewsPanel"
+o.LayoutOrder = 1
+o.Size = UDim2.new(.64,-5,1,0)
+o.BackgroundColor3 = Color3.fromRGB(25,25,25)
+o.BorderSizePixel = 0
+o.Parent = m
 
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 16)
-MainCorner.Parent = Main
+local p = Instance.new("UICorner")
+p.CornerRadius = UDim.new(0,12)
+p.Parent = o
 
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(55, 55, 55)
-MainStroke.Thickness = 1
-MainStroke.Transparency = 0.2
-MainStroke.Parent = Main
+local q = Instance.new("UIPadding")
+q.PaddingTop = UDim.new(0,15)
+q.PaddingBottom = UDim.new(0,12)
+q.PaddingLeft = UDim.new(0,15)
+q.PaddingRight = UDim.new(0,12)
+q.Parent = o
 
-local Header = Instance.new("Frame")
-Header.Name = "Header"
-Header.Size = UDim2.new(1, -32, 0, 52)
-Header.Position = UDim2.fromOffset(16, 12)
-Header.BackgroundTransparency = 1
-Header.Parent = Main
+local r = Instance.new("TextLabel")
+r.Name = "Title"
+r.Size = UDim2.new(1,0,0,25)
+r.BackgroundTransparency = 1
+r.Text = "NEWS & UPDATES"
+r.TextColor3 = Color3.fromRGB(255,255,255)
+r.TextSize = 13
+r.Font = Enum.Font.GothamBold
+r.TextXAlignment = Enum.TextXAlignment.Left
+r.TextYAlignment = Enum.TextYAlignment.Center
+r.Parent = o
 
-local Title = Instance.new("TextLabel")
-Title.Name = "Title"
-Title.Size = UDim2.new(1, -48, 0, 27)
-Title.BackgroundTransparency = 1
-Title.Text = "Karinderya Launcher"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 20
-Title.Font = Enum.Font.GothamBold
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Parent = Header
+local s = Instance.new("Frame")
+s.Name = "Line"
+s.Size = UDim2.new(1,0,0,1)
+s.Position = UDim2.fromOffset(0,31)
+s.BackgroundColor3 = Color3.fromRGB(48,48,48)
+s.BorderSizePixel = 0
+s.Parent = o
 
-local Subtitle = Instance.new("TextLabel")
-Subtitle.Name = "Subtitle"
-Subtitle.Size = UDim2.new(1, -48, 0, 20)
-Subtitle.Position = UDim2.fromOffset(0, 28)
-Subtitle.BackgroundTransparency = 1
-Subtitle.Text = "Online • Ready to execute"
-Subtitle.TextColor3 = Color3.fromRGB(145, 145, 145)
-Subtitle.TextSize = 11
-Subtitle.Font = Enum.Font.Gotham
-Subtitle.TextXAlignment = Enum.TextXAlignment.Left
-Subtitle.Parent = Header
+local t = Instance.new("ScrollingFrame")
+t.Name = "Scroll"
+t.Size = UDim2.new(1,0,1,-45)
+t.Position = UDim2.fromOffset(0,43)
+t.BackgroundTransparency = 1
+t.BorderSizePixel = 0
+t.ScrollBarThickness = 4
+t.ScrollBarImageColor3 = Color3.fromRGB(100,100,100)
+t.ScrollBarImageTransparency = .25
+t.ScrollingDirection = Enum.ScrollingDirection.Y
+t.CanvasPosition = Vector2.zero
+t.CanvasSize = UDim2.fromOffset(0,0)
+t.Active = true
+t.Selectable = true
+t.ScrollingEnabled = true
+t.ElasticBehavior = Enum.ElasticBehavior.Always
+t.ClipsDescendants = true
+t.Parent = o
 
-local Close = Instance.new("TextButton")
-Close.Name = "Close"
-Close.Size = UDim2.fromOffset(32, 32)
-Close.AnchorPoint = Vector2.new(1, 0)
-Close.Position = UDim2.new(1, 0, 0, 1)
-Close.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-Close.BorderSizePixel = 0
-Close.Text = "×"
-Close.TextColor3 = Color3.fromRGB(215, 215, 215)
-Close.TextSize = 22
-Close.Font = Enum.Font.GothamMedium
-Close.AutoButtonColor = true
-Close.Parent = Header
-
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 8)
-CloseCorner.Parent = Close
-
-Close.MouseButton1Click:Connect(function()
-    if Gui and Gui.Parent then
-        Gui:Destroy()
-    end
-end)
-
-local Content = Instance.new("Frame")
-Content.Name = "Content"
-Content.Size = UDim2.new(1, -32, 1, -82)
-Content.Position = UDim2.fromOffset(16, 70)
-Content.BackgroundTransparency = 1
-Content.Parent = Main
-
-local NewsPanel = Instance.new("Frame")
-NewsPanel.Name = "NewsPanel"
-NewsPanel.Size = UDim2.new(0.64, -6, 1, 0)
-NewsPanel.Position = UDim2.fromOffset(0, 0)
-NewsPanel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-NewsPanel.BorderSizePixel = 0
-NewsPanel.Parent = Content
-
-local NewsCorner = Instance.new("UICorner")
-NewsCorner.CornerRadius = UDim.new(0, 12)
-NewsCorner.Parent = NewsPanel
-
-local NewsPadding = Instance.new("UIPadding")
-NewsPadding.PaddingTop = UDim.new(0, 15)
-NewsPadding.PaddingBottom = UDim.new(0, 12)
-NewsPadding.PaddingLeft = UDim.new(0, 15)
-NewsPadding.PaddingRight = UDim.new(0, 12)
-NewsPadding.Parent = NewsPanel
-
-local NewsTitle = Instance.new("TextLabel")
-NewsTitle.Name = "Title"
-NewsTitle.Size = UDim2.new(1, 0, 0, 25)
-NewsTitle.BackgroundTransparency = 1
-NewsTitle.Text = "NEWS & UPDATES"
-NewsTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-NewsTitle.TextSize = 13
-NewsTitle.Font = Enum.Font.GothamBold
-NewsTitle.TextXAlignment = Enum.TextXAlignment.Left
-NewsTitle.Parent = NewsPanel
-
-local NewsLine = Instance.new("Frame")
-NewsLine.Name = "Line"
-NewsLine.Size = UDim2.new(1, 0, 0, 1)
-NewsLine.Position = UDim2.fromOffset(0, 31)
-NewsLine.BackgroundColor3 = Color3.fromRGB(48, 48, 48)
-NewsLine.BorderSizePixel = 0
-NewsLine.Parent = NewsPanel
-
-local NewsScroll = Instance.new("ScrollingFrame")
-NewsScroll.Name = "Scroll"
-NewsScroll.Size = UDim2.new(1, 0, 1, -45)
-NewsScroll.Position = UDim2.fromOffset(0, 43)
-NewsScroll.BackgroundTransparency = 1
-NewsScroll.BorderSizePixel = 0
-NewsScroll.ScrollBarThickness = 3
-NewsScroll.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
-NewsScroll.ScrollBarImageTransparency = 0.35
-NewsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-NewsScroll.CanvasSize = UDim2.new()
-NewsScroll.ScrollingDirection = Enum.ScrollingDirection.Y
-NewsScroll.Parent = NewsPanel
-
-local NewsText = Instance.new("TextLabel")
-NewsText.Name = "Text"
-NewsText.Size = UDim2.new(1, -8, 0, 0)
-NewsText.AutomaticSize = Enum.AutomaticSize.Y
-NewsText.BackgroundTransparency = 1
-NewsText.Text =
+local u = Instance.new("TextLabel")
+u.Name = "Text"
+u.Size = UDim2.new(1,-10,0,0)
+u.AutomaticSize = Enum.AutomaticSize.Y
+u.BackgroundTransparency = 1
+u.Text =
     "The script has been fully fixed and is currently available to Premium users.\n\n" ..
     "In the meantime, please wait a few days while I finish fixing the Freemium version.\n\n" ..
-    "Please keep in mind that I’m just one person working on this script, " ..
+    "Please keep in mind that I'm just one person working on this script, " ..
     "so updates and fixes may take some time.\n\n" ..
-    "In the meantime, please join our Discord server for the latest updates and announcements."
-NewsText.TextColor3 = Color3.fromRGB(205, 205, 205)
-NewsText.TextSize = 13
-NewsText.Font = Enum.Font.Gotham
-NewsText.TextWrapped = true
-NewsText.TextXAlignment = Enum.TextXAlignment.Left
-NewsText.TextYAlignment = Enum.TextYAlignment.Top
-NewsText.LineHeight = 1.15
-NewsText.Parent = NewsScroll
+    "Please join our Discord server for the latest updates and announcements.\n\n" ..
+    "━━━━━━━━━━━━ PREMIUM KEY Q&A ━━━━━━━━━━━━\n\n" ..
+    "Q: How do I get a Premium Key?\n" ..
+    "A: You can purchase a Premium Key through our Discord server. " ..
+    "Head over to #buypremiumkey and follow the instructions.\n\n" ..
+    "Q: Why can't I get a Keylink?\n" ..
+    "A: Premium Keys are provided directly by the script owner after purchase. " ..
+    "Once you purchase a Premium Key through our Discord server, your Key will be provided by the script owner.\n\n" ..
+    "Q: Does the Premium Key expire?\n" ..
+    "A: Yes. Premium Keys have different durations available: 3, 7, 15, and 31 days. " ..
+    "The Key will expire when its purchased duration ends.\n\n" ..
+    "Premium Keys are cheap and affordable.\n\n" ..
+    "━━━━━━━━━━━ PREMIUM CHANGELOG ━━━━━━━━━━\n\n" ..
+    "• Fixed TweenServe and WalkServe getting stuck or behaving unexpectedly.\n" ..
+    "• Slightly optimized the script and removed unused code.\n" ..
+    "• Fixed the Shop not buying items and causing lag.\n\n" ..
+    "━━━━━━━━━━━ FREEMIUM CHANGELOG ━━━━━━━━━━\n\n" ..
+    "• ?\n\n" ..
+    "• ?\n\n" ..
+    "• ?\n\n" ..
+    "• ?\n\n"
+u.TextColor3 = Color3.fromRGB(205,205,205)
+u.TextSize = 13
+u.Font = Enum.Font.Gotham
+u.TextWrapped = true
+u.TextXAlignment = Enum.TextXAlignment.Left
+u.TextYAlignment = Enum.TextYAlignment.Top
+u.LineHeight = 1.2
+u.Parent = t
 
-local ActionPanel = Instance.new("Frame")
-ActionPanel.Name = "ActionPanel"
-ActionPanel.Size = UDim2.new(0.36, -6, 1, 0)
-ActionPanel.Position = UDim2.new(0.64, 6, 0, 0)
-ActionPanel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-ActionPanel.BorderSizePixel = 0
-ActionPanel.Parent = Content
+local v = Instance.new("UIPadding")
+v.PaddingBottom = UDim.new(0,20)
+v.Parent = u
 
-local ActionCorner = Instance.new("UICorner")
-ActionCorner.CornerRadius = UDim.new(0, 12)
-ActionCorner.Parent = ActionPanel
-
-local ActionPadding = Instance.new("UIPadding")
-ActionPadding.PaddingTop = UDim.new(0, 15)
-ActionPadding.PaddingBottom = UDim.new(0, 15)
-ActionPadding.PaddingLeft = UDim.new(0, 12)
-ActionPadding.PaddingRight = UDim.new(0, 12)
-ActionPadding.Parent = ActionPanel
-
-local ActionTitle = Instance.new("TextLabel")
-ActionTitle.Name = "Title"
-ActionTitle.Size = UDim2.new(1, 0, 0, 25)
-ActionTitle.BackgroundTransparency = 1
-ActionTitle.Text = "ACTIONS"
-ActionTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-ActionTitle.TextSize = 13
-ActionTitle.Font = Enum.Font.GothamBold
-ActionTitle.TextXAlignment = Enum.TextXAlignment.Left
-ActionTitle.Parent = ActionPanel
-
-local ActionDesc = Instance.new("TextLabel")
-ActionDesc.Name = "Description"
-ActionDesc.Size = UDim2.new(1, 0, 0, 34)
-ActionDesc.Position = UDim2.fromOffset(0, 30)
-ActionDesc.BackgroundTransparency = 1
-ActionDesc.Text = "Join the Discord for updates, then execute the script."
-ActionDesc.TextColor3 = Color3.fromRGB(135, 135, 135)
-ActionDesc.TextSize = 10
-ActionDesc.Font = Enum.Font.Gotham
-ActionDesc.TextWrapped = true
-ActionDesc.TextXAlignment = Enum.TextXAlignment.Left
-ActionDesc.TextYAlignment = Enum.TextYAlignment.Top
-ActionDesc.Parent = ActionPanel
-
-local CopyDiscord = Instance.new("TextButton")
-CopyDiscord.Name = "CopyDiscord"
-CopyDiscord.Size = UDim2.new(1, 0, 0, 48)
-CopyDiscord.Position = UDim2.fromOffset(0, 72)
-CopyDiscord.BackgroundColor3 = Color3.fromRGB(42, 42, 42)
-CopyDiscord.BorderSizePixel = 0
-CopyDiscord.Text = "COPY DISCORD"
-CopyDiscord.TextColor3 = Color3.fromRGB(255, 255, 255)
-CopyDiscord.TextSize = 11
-CopyDiscord.Font = Enum.Font.GothamBold
-CopyDiscord.AutoButtonColor = true
-CopyDiscord.Parent = ActionPanel
-
-local CopyCorner = Instance.new("UICorner")
-CopyCorner.CornerRadius = UDim.new(0, 9)
-CopyCorner.Parent = CopyDiscord
-
-local CopyStroke = Instance.new("UIStroke")
-CopyStroke.Color = Color3.fromRGB(60, 60, 60)
-CopyStroke.Thickness = 1
-CopyStroke.Transparency = 0.5
-CopyStroke.Parent = CopyDiscord
-
-local Copying = false
-
-CopyDiscord.MouseButton1Click:Connect(function()
-    if Copying or not Gui.Parent then
+local w = function()
+    if not t.Parent or not u.Parent then
         return
     end
-
-    if type(setclipboard) ~= "function" then
-        ActionDesc.Text = "Clipboard is unavailable."
-        return
-    end
-
-    Copying = true
-
-    local success = pcall(function()
-        setclipboard(DiscordLink)
+    task.defer(function()
+        if not t.Parent or not u.Parent then
+            return
+        end
+        t.CanvasSize = UDim2.fromOffset(0,u.AbsoluteSize.Y + 25)
     end)
+end
 
-    if success then
-        CopyDiscord.Text = "COPIED!"
-        ActionDesc.Text = "Discord link copied."
+u:GetPropertyChangedSignal("AbsoluteSize"):Connect(w)
 
-        task.delay(1.5, function()
-            if not Gui.Parent then
-                return
-            end
-
-            CopyDiscord.Text = "COPY DISCORD"
-            ActionDesc.Text = "Join the Discord for updates, then execute the script."
-            Copying = false
-        end)
-    else
-        ActionDesc.Text = "Failed to copy the Discord link."
-        Copying = false
+t.InputChanged:Connect(function(x)
+    if x.UserInputType == Enum.UserInputType.Touch then
+        t.ScrollingEnabled = true
     end
 end)
 
-local Execute = Instance.new("TextButton")
-Execute.Name = "Execute"
-Execute.Size = UDim2.new(1, 0, 0, 48)
-Execute.Position = UDim2.fromOffset(0, 130)
-Execute.BackgroundColor3 = Color3.fromRGB(235, 235, 235)
-Execute.BorderSizePixel = 0
-Execute.Text = "EXECUTE"
-Execute.TextColor3 = Color3.fromRGB(15, 15, 15)
-Execute.TextSize = 12
-Execute.Font = Enum.Font.GothamBold
-Execute.AutoButtonColor = true
-Execute.Parent = ActionPanel
+local x = Instance.new("Frame")
+x.Name = "ActionPanel"
+x.LayoutOrder = 2
+x.Size = UDim2.new(.36,-5,1,0)
+x.BackgroundColor3 = Color3.fromRGB(25,25,25)
+x.BorderSizePixel = 0
+x.Parent = m
 
-local ExecuteCorner = Instance.new("UICorner")
-ExecuteCorner.CornerRadius = UDim.new(0, 9)
-ExecuteCorner.Parent = Execute
+local y = Instance.new("UICorner")
+y.CornerRadius = UDim.new(0,12)
+y.Parent = x
 
-local ExecuteStroke = Instance.new("UIStroke")
-ExecuteStroke.Color = Color3.fromRGB(255, 255, 255)
-ExecuteStroke.Thickness = 1
-ExecuteStroke.Transparency = 0.5
-ExecuteStroke.Parent = Execute
+local z = Instance.new("UIPadding")
+z.PaddingTop = UDim.new(0,15)
+z.PaddingBottom = UDim.new(0,15)
+z.PaddingLeft = UDim.new(0,12)
+z.PaddingRight = UDim.new(0,12)
+z.Parent = x
 
-local Status = Instance.new("TextLabel")
-Status.Name = "Status"
-Status.Size = UDim2.new(1, 0, 0, 35)
-Status.Position = UDim2.new(0, 0, 1, -35)
-Status.BackgroundTransparency = 1
-Status.Text = "https://discord.gg/RQRZ7XkfCy"
-Status.TextColor3 = Color3.fromRGB(125, 125, 125)
-Status.TextSize = 10
-Status.Font = Enum.Font.Gotham
-Status.TextWrapped = true
-Status.TextXAlignment = Enum.TextXAlignment.Center
-Status.TextYAlignment = Enum.TextYAlignment.Center
-Status.Parent = ActionPanel
+local A = Instance.new("TextLabel")
+A.Name = "Title"
+A.Size = UDim2.new(1,0,0,25)
+A.BackgroundTransparency = 1
+A.Text = "ACTIONS"
+A.TextColor3 = Color3.fromRGB(255,255,255)
+A.TextSize = 13
+A.Font = Enum.Font.GothamBold
+A.TextXAlignment = Enum.TextXAlignment.Left
+A.TextYAlignment = Enum.TextYAlignment.Center
+A.Parent = x
 
-local Executing = false
-local ExecuteConnection
+local B = Instance.new("TextLabel")
+B.Name = "Description"
+B.Size = UDim2.new(1,0,0,40)
+B.Position = UDim2.fromOffset(0,30)
+B.BackgroundTransparency = 1
+B.Text = "Join the Discord for updates, then execute the script."
+B.TextColor3 = Color3.fromRGB(135,135,135)
+B.TextSize = 10
+B.Font = Enum.Font.Gotham
+B.TextWrapped = true
+B.TextXAlignment = Enum.TextXAlignment.Left
+B.TextYAlignment = Enum.TextYAlignment.Top
+B.Parent = x
 
-ExecuteConnection = Execute.MouseButton1Click:Connect(function()
-    if Executing or not Gui.Parent then
+local C = Instance.new("TextButton")
+C.Name = "CopyDiscord"
+C.Size = UDim2.new(1,0,0,48)
+C.Position = UDim2.fromOffset(0,78)
+C.BackgroundColor3 = Color3.fromRGB(42,42,42)
+C.BorderSizePixel = 0
+C.Text = "COPY DISCORD"
+C.TextColor3 = Color3.fromRGB(255,255,255)
+C.TextSize = 11
+C.Font = Enum.Font.GothamBold
+C.AutoButtonColor = true
+C.Parent = x
+
+local D = Instance.new("UICorner")
+D.CornerRadius = UDim.new(0,9)
+D.Parent = C
+
+local E = Instance.new("UIStroke")
+E.Color = Color3.fromRGB(60,60,60)
+E.Thickness = 1
+E.Transparency = .5
+E.Parent = C
+
+local F = false
+
+C.MouseButton1Click:Connect(function()
+    if F or not c.Parent then
+        return
+    end
+    if type(setclipboard) ~= "function" then
+        B.Text = "Clipboard is unavailable."
+        return
+    end
+    F = true
+    local G = pcall(function()
+        setclipboard(b.d)
+    end)
+    if G then
+        C.Text = "COPIED!"
+        B.Text = "Discord link copied."
+        task.delay(1.5,function()
+            if not c.Parent then
+                return
+            end
+            C.Text = "COPY DISCORD"
+            B.Text = "Join the Discord for updates, then execute the script."
+            F = false
+        end)
+    else
+        B.Text = "Failed to copy the Discord link."
+        F = false
+    end
+end)
+
+local H = Instance.new("TextButton")
+H.Name = "Execute"
+H.Size = UDim2.new(1,0,0,48)
+H.Position = UDim2.fromOffset(0,138)
+H.BackgroundColor3 = Color3.fromRGB(235,235,235)
+H.BorderSizePixel = 0
+H.Text = "EXECUTE"
+H.TextColor3 = Color3.fromRGB(15,15,15)
+H.TextSize = 12
+H.Font = Enum.Font.GothamBold
+H.AutoButtonColor = true
+H.Parent = x
+
+local I = Instance.new("UICorner")
+I.CornerRadius = UDim.new(0,9)
+I.Parent = H
+
+local J = Instance.new("UIStroke")
+J.Color = Color3.fromRGB(255,255,255)
+J.Thickness = 1
+J.Transparency = .5
+J.Parent = H
+
+local K = Instance.new("TextLabel")
+K.Name = "Status"
+K.Size = UDim2.new(1,0,0,40)
+K.Position = UDim2.new(0,0,1,-40)
+K.BackgroundTransparency = 1
+K.Text = b.d
+K.TextColor3 = Color3.fromRGB(125,125,125)
+K.TextSize = 9
+K.Font = Enum.Font.Gotham
+K.TextWrapped = true
+K.TextXAlignment = Enum.TextXAlignment.Center
+K.TextYAlignment = Enum.TextYAlignment.Center
+K.Parent = x
+
+local L = false
+local M
+
+M = H.MouseButton1Click:Connect(function()
+    if L or not c.Parent then
         return
     end
 
-    Executing = true
-    Execute.Active = false
-    Execute.AutoButtonColor = false
-    Execute.Text = "LOADING..."
-    ActionDesc.Text = "Fetching the latest script..."
+    L = true
+    H.Active = false
+    H.AutoButtonColor = false
+    H.Text = "LOADING..."
+    B.Text = "Fetching the latest script..."
 
     task.spawn(function()
-        local success, source = pcall(function()
-            return game:HttpGet(ScriptURL)
+        local N,O = pcall(function()
+            return game:HttpGet(b.s)
         end)
 
-        if not Gui.Parent then
+        if not c.Parent then
             return
         end
 
-        if not success or type(source) ~= "string" or source == "" then
-            Execute.Text = "FAILED"
-            Execute.Active = true
-            Execute.AutoButtonColor = true
-            ActionDesc.Text = "Unable to load the script."
-            Executing = false
+        if not N or type(O) ~= "string" or O == "" then
+            H.Text = "FAILED"
+            H.Active = true
+            H.AutoButtonColor = true
+            B.Text = "Unable to load the script."
+            L = false
             return
         end
 
-        ActionDesc.Text = "Preparing script..."
+        B.Text = "Preparing script..."
 
-        local loadSuccess, loadedScript = pcall(function()
-            return loadstring(source)
+        local P,Q = pcall(function()
+            return loadstring(O)
         end)
 
-        source = nil
+        O = nil
 
-        if not loadSuccess or type(loadedScript) ~= "function" then
-            Execute.Text = "INVALID SCRIPT"
-            Execute.Active = true
-            Execute.AutoButtonColor = true
-            ActionDesc.Text = "The downloaded script could not be compiled."
-            Executing = false
+        if not P or type(Q) ~= "function" then
+            H.Text = "INVALID SCRIPT"
+            H.Active = true
+            H.AutoButtonColor = true
+            B.Text = "The downloaded script could not be compiled."
+            L = false
             return
         end
 
-        if ExecuteConnection then
-            ExecuteConnection:Disconnect()
-            ExecuteConnection = nil
+        if M then
+            M:Disconnect()
+            M = nil
         end
 
-        Gui:Destroy()
+        c:Destroy()
 
         task.spawn(function()
-            pcall(loadedScript)
-            loadedScript = nil
-
+            pcall(Q)
+            Q = nil
             pcall(function()
                 collectgarbage("collect")
             end)
         end)
     end)
 end)
+
+local R = function()
+    if not d.Parent then
+        return
+    end
+
+    local S = workspace.CurrentCamera
+    if not S then
+        return
+    end
+
+    local T = S.ViewportSize
+    local U = T.X
+
+    if U <= 500 then
+        d.Size = UDim2.new(.94,0,.9,0)
+        h.Size = UDim2.new(1,-28,0,54)
+        h.Position = UDim2.fromOffset(14,10)
+        i.TextSize = 18
+        j.TextSize = 10
+        m.Size = UDim2.new(1,-28,1,-74)
+        m.Position = UDim2.fromOffset(14,64)
+        n.FillDirection = Enum.FillDirection.Vertical
+        n.Padding = UDim.new(0,8)
+        o.Size = UDim2.new(1,0,.58,-4)
+        x.Size = UDim2.new(1,0,.42,-4)
+        u.TextSize = 12
+        u.LineHeight = 1.15
+        q.PaddingTop = UDim.new(0,13)
+        q.PaddingLeft = UDim.new(0,13)
+        q.PaddingRight = UDim.new(0,10)
+        t.ScrollBarThickness = 5
+        z.PaddingTop = UDim.new(0,12)
+        z.PaddingBottom = UDim.new(0,12)
+        z.PaddingLeft = UDim.new(0,12)
+        z.PaddingRight = UDim.new(0,12)
+        B.TextSize = 10
+    else
+        d.Size = UDim2.new(.92,0,.86,0)
+        h.Size = UDim2.new(1,-32,0,58)
+        h.Position = UDim2.fromOffset(16,12)
+        i.TextSize = 20
+        j.TextSize = 11
+        m.Size = UDim2.new(1,-32,1,-82)
+        m.Position = UDim2.fromOffset(16,70)
+        n.FillDirection = Enum.FillDirection.Horizontal
+        n.Padding = UDim.new(0,10)
+        o.Size = UDim2.new(.64,-5,1,0)
+        x.Size = UDim2.new(.36,-5,1,0)
+        u.TextSize = 13
+        u.LineHeight = 1.2
+        q.PaddingTop = UDim.new(0,15)
+        q.PaddingLeft = UDim.new(0,15)
+        q.PaddingRight = UDim.new(0,12)
+        t.ScrollBarThickness = 4
+        z.PaddingTop = UDim.new(0,15)
+        z.PaddingBottom = UDim.new(0,15)
+        z.PaddingLeft = UDim.new(0,12)
+        z.PaddingRight = UDim.new(0,12)
+        B.TextSize = 10
+    end
+
+    task.defer(w)
+end
+
+local V = workspace.CurrentCamera
+
+if V then
+    V:GetPropertyChangedSignal("ViewportSize"):Connect(R)
+end
+
+R()
+w()
